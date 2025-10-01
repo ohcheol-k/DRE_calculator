@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pediatric DRE Risk Calculator</title>
+<style>
+  :root { --bg:#0b1220; --card:#121a2b; --text:#e7eefc; --muted:#9bb0d3; --accent:#5aa9ff; }
+  *{box-sizing:border-box} body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);}
+  .wrap{max-width:980px;margin:0 auto;padding:24px}
+  .card{background:var(--card);border-radius:16px;padding:20px;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+  h1{margin:0 0 4px;font-size:26px}
+  .spacer{height:8px}
+  .sub{color:var(--muted);margin-bottom:12px}
+  .meta{display:flex;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:14px;margin-bottom:8px}
+  .ack{color:var(--muted);font-size:14px;margin-bottom:16px}
+  label{display:block;margin:8px 0 4px}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .row .col{background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:12px}
+  .chk{display:flex;gap:8px;align-items:center;margin:6px 0}
+  select,button,input[type=range]{background:#0f172a;color:var(--text);border:1px solid rgba(255,255,255,.15);border-radius:10px;padding:10px 12px;font-size:15px}
+  button{cursor:pointer}
+  .btns{display:flex;gap:10px;align-items:center;margin-top:12px}
+  .out{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:16px}
+  .tile{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:12px;min-height:92px}
+  .big{font-size:22px;font-weight:700;display:flex;gap:8px;align-items:center}
+  .note{color:var(--muted);font-size:13px;margin-top:8px}
+  .risk-low{color:#10b981} .risk-mid{color:#f59e0b} .risk-high{color:#ef4444}
+  .risk-low-bg{background:rgba(16,185,129,.12)!important;border-color:rgba(16,185,129,.35)!important}
+  .risk-mid-bg{background:rgba(245,158,11,.12)!important;border-color:rgba(245,158,11,.35)!important}
+  .risk-high-bg{background:rgba(239,68,68,.12)!important;border-color:rgba(239,68,68,.35)!important}
+  .settings{margin-top:16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:12px}
+  .settings h3{margin:0 0 8px}
+  .sliders{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .slider label{display:flex;justify-content:space-between;align-items:center}
+  .summary{margin-top:16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:12px}
+  .summary h3{margin:0 0 8px}
+  table.sum{width:100%;border-collapse:collapse;font-size:14px}
+  table.sum th, table.sum td{border-bottom:1px solid rgba(255,255,255,.08);padding:6px 8px;text-align:left}
+  .refs{font-size:13px;color:var(--muted)}
+  .kicker{font-size:13px;color:var(--muted)}
+  details.help{margin-top:18px}
+  details.help summary{cursor:pointer;font-weight:700}
+  details.help .content{margin-top:8px;color:#c8d6f4;line-height:1.45}
+  @media (max-width:900px){.row{grid-template-columns:1fr}.out{grid-template-columns:1fr 1fr}.sliders{grid-template-columns:1fr}}
+  @media print {
+    body{background:#fff;color:#000; -webkit-print-color-adjust: exact; print-color-adjust: exact;}
+    .card, .row .col, .tile, .settings, .summary{box-shadow:none;border:1px solid #bbb;background:#fff;color:#000}
+    .wrap{max-width:100%;padding:0}
+    .btns, details.help{display:none}
+    .kicker{color:#000}
+    .risk-low{color:#000} .risk-mid{color:#000} .risk-high{color:#000}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <h1>Pediatric Drug-Resistant Epilepsy (DRE) Risk Calculator</h1>
+    <div class="spacer"></div>
+    <div class="meta">
+      <div><strong>Author:</strong> Ohcheol KWON</div>
+      <div><strong>Affiliation:</strong> Department of Pediatrics, Asan Medical Center Children’s Hospital, University of Ulsan College of Medicine, Seoul, Republic of Korea</div>
+    </div>
+    <div class="ack">
+      <strong>Acknowledgment:</strong> This research was supported by a grant of the Korea Health Technology R&amp;D Project, through the Korea Health Industry Development Institute (KHIDI), funded by the Ministry of Health &amp; Welfare, Republic of Korea (grant number: HI19C0481, HC20C0164).
+    </div>
+    <div class="sub">Client-side app. No data leaves your browser. Logistic model = intercept + Σβx → p = 1/(1+e<sup>−LP</sup>)</div>
+
+    <div class="row">
+      <div class="col">
+        <div class="chk"><input type="checkbox" id="onset"><label for="onset">Seizure onset age &lt; 1 year (Yes)</label></div>
+
+        <label for="freq">Seizure frequency before treatment (baseline: yearly)</label>
+        <select id="freq">
+          <option value="yearly">yearly (ref)</option>
+          <option value="monthly">monthly</option>
+          <option value="weekly">weekly</option>
+          <option value="daily">daily</option>
+        </select>
+
+        <div class="chk"><input type="checkbox" id="se"><label for="se">History of status epilepticus (Yes)</label></div>
+        <div class="chk"><input type="checkbox" id="dev"><label for="dev">Developmental disorders (Yes)</label></div>
+        <div class="chk"><input type="checkbox" id="neuro"><label for="neuro">Neurological abnormalities (Yes)</label></div>
+        <div class="chk"><input type="checkbox" id="psy"><label for="psy">Psychiatric disorders (Yes)</label></div>
+      </div>
+
+      <div class="col">
+        <label for="etype">Epilepsy type (baseline: generalized)</label>
+        <select id="etype">
+          <option value="generalized">generalized (ref)</option>
+          <option value="focal">focal</option>
+          <option value="combined">combined</option>
+          <option value="unknown">unknown</option>
+        </select>
+
+        <div class="chk"><input type="checkbox" id="eeg"><label for="eeg">EEG background abnormality (Yes)</label></div>
+        <div class="chk"><input type="checkbox" id="eti_s"><label for="eti_s">Etiology: structural (Yes)</label></div>
+        <div class="chk"><input type="checkbox" id="eti_i"><label for="eti_i">Etiology: infectious (Yes)</label></div>
+
+        <div class="btns">
+          <button id="compute">Compute</button>
+          <button id="savepdf" title="Download a PDF summary of the current calculation">Save PDF</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Output tiles -->
+    <div class="out">
+      <div class="tile"><div>Linear predictor (LP)</div><div id="lp" class="big">–</div></div>
+      <div class="tile"><div>Total Points</div><div id="pts" class="big">–</div></div>
+      <div class="tile"><div>Risk of DRE</div><div id="risk" class="big">–</div></div>
+      <div class="tile" id="risk_tile"><div>Risk category</div><div class="big"><span id="cat_icon" aria-hidden="true">–</span><span id="cat">–</span></div></div>
+    </div>
+
+    <div class="settings">
+      <h3>Risk thresholds</h3>
+      <div class="sliders">
+        <div class="slider">
+          <label for="low_cut">Low cut-off <span id="low_val">30%</span></label>
+          <input type="range" id="low_cut" min="0.00" max="0.90" step="0.01" value="0.30">
+        </div>
+        <div class="slider">
+          <label for="high_cut">High cut-off <span id="high_val">60%</span></label>
+          <input type="range" id="high_cut" min="0.05" max="0.95" step="0.01" value="0.60">
+        </div>
+      </div>
+      <div class="note" id="cut_rule">Current rule: p &lt; 30% → Low; 30–60% → Intermediate; ≥ 60% → High.</div>
+    </div>
+
+    <div class="summary" id="summary" hidden>
+      <h3>Summary of current calculation</h3>
+      <table class="sum" id="sum_table"></table>
+      <div class="note">This section is included when you Save PDF (print).</div>
+    </div>
+
+    <p class="kicker">* Points are relative (β-based) for display only. Probability uses your exact model.</p>
+
+    <details class="help">
+      <summary>Help & FAQ</summary>
+      <div class="content">
+        <h3>About This Tool</h3>
+        <ul>
+          <li><strong>Purpose:</strong> Early estimation of pediatric drug-resistant epilepsy (DRE) risk using a multivariable logistic regression model.</li>
+          <li><strong>Data Privacy:</strong> All calculations run locally in your browser; no data is sent or stored.</li>
+          <li><strong>Usage:</strong> Select clinical features at/near diagnosis and press <em>Compute</em>. You can then <em>Save PDF</em> for documentation.</li>
+        </ul>
+
+        <h3>Variable Definitions</h3>
+        <ul>
+          <li><strong>Seizure frequency:</strong> Frequency prior to treatment initiation categorized as
+            <em>daily</em> (≥1 seizure/day), <em>weekly</em> (1–6/week), <em>monthly</em> (1–3/month), or <em>yearly</em> (1–11/year).</li>
+          <li><strong>Epilepsy type:</strong> Classified as focal, generalized, combined focal-generalized, or unknown according to the 2017 ILAE guidelines.
+            <span class="refs">Scheffer IE, Berkovic S, Capovilla G, Connolly MB, French JA, Guilhoto L, et al. ILAE classification of the epilepsies. <em>Epilepsia</em>. 2017;58(4):512-521.</span></li>
+          <li><strong>Epilepsy etiology:</strong> Categorized into structural, genetic, infectious, metabolic, immune, or unknown, according to the 2017 ILAE guidelines.
+            <span class="refs">Scheffer IE, Berkovic S, Capovilla G, Connolly MB, French JA, Guilhoto L, et al. ILAE classification of the epilepsies. <em>Epilepsia</em>. 2017;58(4):512-521.</span></li>
+          <li><strong>Neurological abnormalities:</strong> Presence of neurological abnormalities (e.g., motor deficits, cranial nerve abnormalities) identified at initial diagnosis.</li>
+          <li><strong>Developmental disorders:</strong> Developmental delay or intellectual disability diagnosed either at epilepsy diagnosis or during subsequent follow-up.</li>
+          <li><strong>Psychiatric comorbidities:</strong> ADHD, ASD, anxiety disorders, depressive disorders, etc.</li>
+        </ul>
+
+        <h3>Definition of Drug-Resistant Epilepsy (DRE)</h3>
+        <p>Drug-resistant epilepsy is defined as the persistence of seizures despite <em>adequate trials of two</em> tolerated and appropriately chosen antiseizure medication regimens, used either as monotherapies or in combination. “Sustained seizure freedom” is typically taken as freedom from seizures for <em>at least 12 months</em> or for a period &ge; <em>three times</em> the longest pre-intervention inter-seizure interval, whichever is longer.</p>
+        <p class="refs">Kwan P, Arzimanoglou A, Berg AT, Brodie MJ, Allen Hauser W, Mathern G, et al. Definition of drug resistant epilepsy: Consensus proposal by the ad hoc Task Force of the ILAE Commission on Therapeutic Strategies. <em>Epilepsia</em>. 2010;51(6):1069-1077.</p>
+
+        <h3>Interpretation</h3>
+        <ul>
+          <li><strong>Low risk (&lt;30%)</strong>: Unlikely to develop DRE; continue monitoring.</li>
+          <li><strong>Intermediate risk (30–60%)</strong>: Consider closer follow-up and early intervention strategies.</li>
+          <li><strong>High risk (≥60%)</strong>: High likelihood of DRE; discuss treatment intensification and alternative therapies.</li>
+        </ul>
+
+        <h3>Limitations</h3>
+        <ul>
+          <li>Model derived from a single-center retrospective cohort; performance may vary in different populations.</li>
+          <li>This tool does not replace clinical judgment.</li>
+        </ul>
+      </div>
+    </details>
+  </div>
+</div>
+
+<script>
+const INTERCEPT = -2.398;
+const BETAS = {
+  "Sz_1y_yes": 0.286,
+  "Sz_count_daily": 1.412,
+  "Sz_count_weekly": 1.226,
+  "Sz_count_monthly": 0.618,
+  "status_epilepticus": 1.26,
+  "dev_def": 0.953,
+  "neuro_def": 0.34,
+  "psycho": 0.226,
+  "epilepsy_type_focal": 0.292,
+  "epilepsy_type_combined": 0.905,
+  "epilepsy_type_unknown": 0.274,
+  "EEG_bg": 0.304,
+  "eti_structural": 0.645,
+  "eti_infectious": 0.552,
+};
+
+let LOW_CUT = 0.10, HIGH_CUT = 0.40;
+
+function invLogit(x){ return 1/(1+Math.exp(-x)); }
+const MAX_ABS_BETA = Math.max(...Object.values(BETAS).map(b => Math.abs(b)));
+function betaToPoints(b){ return Math.abs(b)/MAX_ABS_BETA*100.0; }
+
+function getInputs(){
+  return {
+    onset: document.getElementById('onset').checked,
+    freq: document.getElementById('freq').value,
+    se: document.getElementById('se').checked,
+    dev: document.getElementById('dev').checked,
+    neuro: document.getElementById('neuro').checked,
+    psy: document.getElementById('psy').checked,
+    etype: document.getElementById('etype').value,
+    eeg: document.getElementById('eeg').checked,
+    eti_s: document.getElementById('eti_s').checked,
+    eti_i: document.getElementById('eti_i').checked
+  };
+}
+
+function fmtYesNo(v){ return v ? "Yes" : "No"; }
+function pct(x){ return (100*x).toFixed(1) + "%"; }
+
+function renderSummary(last){
+  const tbl = document.getElementById('sum_table');
+  const cutLow = Math.round(LOW_CUT*100);
+  const cutHigh = Math.round(HIGH_CUT*100);
+  const rows = [
+    ["Timestamp (local)", new Date().toLocaleString()],
+    ["Seizure onset age < 1 year", fmtYesNo(last.inputs.onset)],
+    ["Seizure frequency (before treatment)", last.inputs.freq],
+    ["History of status epilepticus", fmtYesNo(last.inputs.se)],
+    ["Developmental disorders", fmtYesNo(last.inputs.dev)],
+    ["Neurological abnormalities", fmtYesNo(last.inputs.neuro)],
+    ["Psychiatric disorders", fmtYesNo(last.inputs.psy)],
+    ["Epilepsy type", last.inputs.etype],
+    ["EEG background abnormality", fmtYesNo(last.inputs.eeg)],
+    ["Etiology: structural", fmtYesNo(last.inputs.eti_s)],
+    ["Etiology: infectious", fmtYesNo(last.inputs.eti_i)],
+    ["Linear predictor (LP)", last.lp.toFixed(3)],
+    ["Total Points", last.pts.toFixed(1)],
+    ["Risk of DRE", pct(last.p) ],
+    ["Risk category", last.cat],
+    ["Cut-offs", `Low < ${cutLow}% ; ${cutLow}–${cutHigh}% Intermediate ; ≥ ${cutHigh}% High`]
+  ];
+  tbl.innerHTML = rows.map(([k,v]) => `<tr><th>${k}</th><td>${v}</td></tr>`).join("");
+  document.getElementById('summary').hidden = false;
+}
+
+function updateCutoffs(){
+  const lowEl = document.getElementById('low_cut');
+  const highEl = document.getElementById('high_cut');
+  let l = parseFloat(lowEl.value);
+  let h = parseFloat(highEl.value);
+  const minGap = 0.01;
+  if (l >= h - minGap){ h = Math.min(0.95, l + minGap); highEl.value = h.toFixed(2); }
+  if (h <= l + minGap){ l = Math.max(0, h - minGap); lowEl.value = l.toFixed(2); }
+  LOW_CUT = l; HIGH_CUT = h;
+  document.getElementById('low_val').textContent = Math.round(LOW_CUT*100) + "%";
+  document.getElementById('high_val').textContent = Math.round(HIGH_CUT*100) + "%";
+  document.getElementById('cut_rule').textContent =
+    `Current rule: p < ${Math.round(LOW_CUT*100)}% → Low; ${Math.round(LOW_CUT*100)}–${Math.round(HIGH_CUT*100)}% → Intermediate; ≥ ${Math.round(HIGH_CUT*100)}% → High.`;
+  if (window.__dre_last__) compute();
+}
+
+function compute(){
+  const inp = getInputs();
+  let lp = INTERCEPT;
+  let pts = 0;
+
+  if(inp.onset){ lp += BETAS["Sz_1y_yes"]; pts += betaToPoints(BETAS["Sz_1y_yes"]); }
+
+  if(inp.freq==="monthly"){ lp += BETAS["Sz_count_monthly"]; pts += betaToPoints(BETAS["Sz_count_monthly"]); }
+  else if(inp.freq==="weekly"){ lp += BETAS["Sz_count_weekly"]; pts += betaToPoints(BETAS["Sz_count_weekly"]); }
+  else if(inp.freq==="daily"){ lp += BETAS["Sz_count_daily"]; pts += betaToPoints(BETAS["Sz_count_daily"]); }
+
+  if(inp.se){ lp += BETAS["status_epilepticus"]; pts += betaToPoints(BETAS["status_epilepticus"]); }
+  if(inp.dev){ lp += BETAS["dev_def"]; pts += betaToPoints(BETAS["dev_def"]); }
+  if(inp.neuro){ lp += BETAS["neuro_def"]; pts += betaToPoints(BETAS["neuro_def"]); }
+  if(inp.psy){ lp += BETAS["psycho"]; pts += betaToPoints(BETAS["psycho"]); }
+
+  if(inp.etype==="focal"){ lp += BETAS["epilepsy_type_focal"]; pts += betaToPoints(BETAS["epilepsy_type_focal"]); }
+  else if(inp.etype==="combined"){ lp += BETAS["epilepsy_type_combined"]; pts += betaToPoints(BETAS["epilepsy_type_combined"]); }
+  else if(inp.etype==="unknown"){ lp += BETAS["epilepsy_type_unknown"]; pts += betaToPoints(BETAS["epilepsy_type_unknown"]); }
+
+  if(inp.eeg){ lp += BETAS["EEG_bg"]; pts += betaToPoints(BETAS["EEG_bg"]); }
+  if(inp.eti_s){ lp += BETAS["eti_structural"]; pts += betaToPoints(BETAS["eti_structural"]); }
+  if(inp.eti_i){ lp += BETAS["eti_infectious"]; pts += betaToPoints(BETAS["eti_infectious"]); }
+
+  const p = invLogit(lp);
+  let cat = "High", catClass = "risk-high", tileClass = "risk-high-bg", icon = "🔴";
+  if(p < LOW_CUT){ cat = "Low"; catClass = "risk-low"; tileClass = "risk-low-bg"; icon = "🟢"; }
+  else if(p < HIGH_CUT){ cat = "Intermediate"; catClass = "risk-mid"; tileClass = "risk-mid-bg"; icon = "🟡"; }
+
+  document.getElementById('lp').textContent = lp.toFixed(3);
+  document.getElementById('risk').textContent = (100*p).toFixed(1) + "%";
+  document.getElementById('pts').textContent = pts.toFixed(1);
+
+  const catSpan = document.getElementById('cat');
+  const iconSpan = document.getElementById('cat_icon');
+  catSpan.textContent = cat;
+  catSpan.className = "big " + (catClass);
+  iconSpan.textContent = icon;
+
+  const tile = document.getElementById('risk_tile');
+  tile.classList.remove("risk-low-bg","risk-mid-bg","risk-high-bg");
+  tile.classList.add(tileClass);
+
+  const last = { lp: lp, p: p, pts: pts, cat: cat, inputs: inp, timestamp: new Date().toISOString() };
+  window.__dre_last__ = last;
+  renderSummary(last);
+}
+
+function savePDF(){
+  if(!window.__dre_last__){ compute(); }
+  window.print();
+}
+
+document.getElementById('compute').addEventListener('click', compute);
+document.getElementById('savepdf').addEventListener('click', savePDF);
+document.getElementById('low_cut').addEventListener('input', updateCutoffs);
+document.getElementById('high_cut').addEventListener('input', updateCutoffs);
+updateCutoffs();
+</script>
+</body>
+</html>
+
+
